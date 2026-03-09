@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>文字收藏本</title>
+
+  <!-- PWA Meta -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="文字收藏" />
+  <meta name="theme-color" content="#161410" />
+  <meta name="description" content="記錄有感覺的文字" />
+
+  <!-- PWA Manifest (inline via data URI) -->
+  <link rel="manifest" href="data:application/manifest+json,{
+    %22name%22:%22文字收藏本%22,
+    %22short_name%22:%22文字收藏%22,
+    %22start_url%22:%22.%22,
+    %22display%22:%22standalone%22,
+    %22background_color%22:%22%23161410%22,
+    %22theme_color%22:%22%23161410%22,
+    %22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23161410'/%3E%3Ctext x='256' y='320' text-anchor='middle' font-size='260' fill='%23C4A882'%3E文%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22512x512%22,%22type%22:%22image/svg+xml%22}]
+  }" />
+
+  <!-- Apple touch icon -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23161410'/><text x='256' y='330' text-anchor='middle' font-size='280' fill='%23C4A882'>文</text></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #161410;
+      --paper: rgba(30,26,22,0.85);
+      --ink: #E8E0D4;
+      --sepia: #C4A882;
+      --sepia-light: #7A6248;
+      --sepia-faint: #2E2820;
+      --muted: #6B5E50;
+      --muted2: #5A4E42;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Noto Serif TC', serif;
+      overflow-x: hidden;
+    }
+
+    /* Subtle paper texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #app {
+      position: relative;
+      z-index: 1;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: calc(var(--safe-top) + 48px) 24px calc(var(--safe-bottom) + 80px);
+    }
+
+    /* Header */
+    .header {
+      border-bottom: 1px solid var(--sepia-faint);
+      padding-bottom: 20px;
+      margin-bottom: 40px;
+    }
+
+    .header-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 10px;
+      letter-spacing: 0.35em;
+      color: var(--sepia);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .header-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+
+    .header-count {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Input Card */
+    .input-card {
+      background: var(--paper);
+      border: 1px solid var(--sepia-faint);
+      border-radius: 2px;
+      padding: 20px 22px;
+      margin-bottom: 44px;
+      box-shadow: 0 1px 12px rgba(139,115,85,0.07);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .input-card textarea {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-family: 'Noto Serif TC', serif;
+      font-size: 15px;
+      line-height: 1.9;
+      color: var(--ink);
+      resize: none;
+      outline: none;
+      min-height: 90px;
+    }
+
+    .input-card textarea::placeholder { color: var(--muted2); }
+
+    .input-divider {
+      border: none;
+      border-top: 1px solid var(--sepia-faint);
+      margin: 12px 0;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .em-dash {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      color: var(--muted2);
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .input-card input[type="text"] {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: 'Noto Serif TC', serif;
+      font-size: 12px;
+      color: var(--sepia);
+      outline: none;
+      min-width: 0;
+    }
+
+    .input-card input[type="text"]::placeholder { color: var(--muted2); }
+
+    .save-btn {
+      flex-shrink: 0;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--sepia);
+      background: none;
+      border: 1px solid var(--sepia-light);
+      border-radius: 1px;
+      padding: 7px 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .save-btn:active { opacity: 0.6; transform: scale(0.97); }
+
+    /* Entries */
+    .entries { }
+
+    .entry {
+      padding: 24px 8px 24px 16px;
+      border-left: 2px solid transparent;
+      border-bottom: 1px solid var(--sepia-faint);
+      position: relative;
+      transition: border-left-color 0.2s, background 0.2s;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .entry:last-child { border-bottom: none; }
+
+    .entry:active { border-left-color: var(--sepia); background: rgba(139,115,85,0.03); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .entry.flash { animation: flashIn 1s ease forwards; }
+    @keyframes flashIn {
+      0% { background: rgba(139,115,85,0.12); }
+      100% { background: transparent; }
+    }
+
+    .entry-text {
+      font-size: 15px;
+      line-height: 2;
+      color: var(--ink);
+      font-weight: 300;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .entry-source {
+      margin-top: 10px;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 13px;
+      color: var(--sepia);
+    }
+
+    .entry-date {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted2);
+    }
+
+    .del-btn {
+      position: absolute;
+      top: 20px;
+      right: 0;
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--muted2);
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+      opacity: 0;
+      transition: opacity 0.2s;
+      -webkit-appearance: none;
+    }
+
+    /* On mobile: show delete on long-press — handled via JS */
+    .entry.show-del .del-btn { opacity: 1; }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 64px 0;
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 19px;
+      color: var(--muted2);
+      line-height: 1.7;
+    }
+
+    /* Search */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 32px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 14px;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(255,255,255,0.5);
+      border: 1px solid var(--sepia-faint);
+      border-radius: 2px;
+      padding: 11px 36px 11px 38px;
+      font-family: 'Noto Serif TC', serif;
+      font-size: 13px;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .search-input::placeholder { color: var(--muted2); }
+    .search-input:focus {
+      border-color: var(--sepia-light);
+      box-shadow: 0 1px 8px rgba(139,115,85,0.08);
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      font-size: 16px;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      display: none;
+      -webkit-appearance: none;
+    }
+
+    .search-clear.visible { display: block; }
+    .search-clear:active { color: var(--sepia); }
+
+    .search-result-info {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      text-align: right;
+      font-family: 'Noto Serif TC', serif;
+    }
+
+    /* Highlight */
+    mark {
+      background: rgba(196,168,130,0.25);
+      color: var(--ink);
+      border-radius: 1px;
+      padding: 0 1px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 24px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--ink);
+      color: var(--bg);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      padding: 10px 20px;
+      border-radius: 2px;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 100;
+      font-family: 'Noto Serif TC', serif;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="header">
+    <div class="header-label">文字收藏本</div>
+    <div class="header-title">有感覺的文字，留在這裡</div>
+    <div class="header-count" id="count">尚無收藏</div>
+  </div>
+
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input class="search-input" id="searchInput" type="search" placeholder="搜尋收藏的文字…" oninput="onSearch()" />
+    <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
+  </div>
+  <div class="search-result-info" id="searchInfo" style="display:none"></div>
+
+  <div class="input-card">
+    <textarea id="textInput" placeholder="把有感覺的文字貼在這裡……" rows="4"></textarea>
+    <hr class="input-divider" />
+    <div class="input-row">
+      <span class="em-dash">—</span>
+      <input type="text" id="sourceInput" placeholder="出處、作者、書名（可略）" />
+      <button class="save-btn" onclick="addEntry()">收藏</button>
+    </div>
+  </div>
+
+  <div class="entries" id="entries"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const STORAGE_KEY = 'text-collection-v1';
+  let entries = [];
+  let longPressTimer = null;
+  let currentQuery = '';
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      entries = raw ? JSON.parse(raw) : [];
+    } catch(_) { entries = []; }
+    render();
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(_) {}
+  }
+
+  function formatDate(ts) {
+    return new Date(ts).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  function updateCount() {
+    const el = document.getElementById('count');
+    el.textContent = entries.length === 0 ? '尚無收藏' : `共 ${entries.length} 則收藏`;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function highlight(str, query) {
+    if (!query) return escHtml(str);
+    const escaped = escHtml(str);
+    const escapedQ = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return escaped.replace(new RegExp(escapedQ, 'gi'), m => `<mark>${m}</mark>`);
+  }
+
+  function getFiltered() {
+    if (!currentQuery) return entries;
+    const q = currentQuery.toLowerCase();
+    return entries.filter(e =>
+      e.text.toLowerCase().includes(q) ||
+      (e.source && e.source.toLowerCase().includes(q))
+    );
+  }
+
+  function render() {
+    const container = document.getElementById('entries');
+    const infoEl = document.getElementById('searchInfo');
+    const filtered = getFiltered();
+
+    updateCount();
+
+    if (currentQuery) {
+      infoEl.style.display = 'block';
+      infoEl.textContent = filtered.length === 0
+        ? `找不到「${currentQuery}」`
+        : `找到 ${filtered.length} 則`;
+    } else {
+      infoEl.style.display = 'none';
+    }
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="empty">還沒有收藏<br>把第一句話放進來吧</div>';
+      return;
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="empty">沒有符合的結果</div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map((e, i) => `
+      <div class="entry" id="entry-${e.id}" style="animation-delay:${Math.min(i,8)*0.04}s">
+        <div class="entry-text">${highlight(e.text, currentQuery)}</div>
+        ${e.source ? `<div class="entry-source">— ${highlight(e.source, currentQuery)}</div>` : ''}
+        <div class="entry-date">${formatDate(e.ts)}</div>
+        <button class="del-btn" onclick="deleteEntry(${e.id})" title="移除">×</button>
+      </div>
+    `).join('');
+
+    filtered.forEach(e => bindLongPress(e.id));
+  }
+
+  function onSearch() {
+    const val = document.getElementById('searchInput').value;
+    currentQuery = val.trim();
+    const clearBtn = document.getElementById('searchClear');
+    clearBtn.classList.toggle('visible', currentQuery.length > 0);
+    render();
+  }
+
+  function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    currentQuery = '';
+    document.getElementById('searchClear').classList.remove('visible');
+    document.getElementById('searchInfo').style.display = 'none';
+    render();
+  }
+
+  function addEntry() {
+    const text = document.getElementById('textInput').value.trim();
+    if (!text) { showToast('請先輸入文字'); return; }
+    const source = document.getElementById('sourceInput').value.trim();
+    const entry = { id: Date.now(), text, source, ts: Date.now() };
+    entries.unshift(entry);
+    save();
+    document.getElementById('textInput').value = '';
+    document.getElementById('sourceInput').value = '';
+    // Clear search so new entry is visible
+    clearSearch();
+    setTimeout(() => {
+      const el = document.getElementById(`entry-${entry.id}`);
+      if (el) el.classList.add('flash');
+    }, 50);
+    showToast('已收藏');
+  }
+
+  function deleteEntry(id) {
+    if (!confirm('移除這則收藏？')) return;
+    entries = entries.filter(e => e.id !== id);
+    save();
+    render();
+  }
+
+  function bindLongPress(id) {
+    const el = document.getElementById(`entry-${id}`);
+    if (!el) return;
+    el.addEventListener('touchstart', () => {
+      longPressTimer = setTimeout(() => {
+        document.querySelectorAll('.entry').forEach(e => e.classList.remove('show-del'));
+        el.classList.add('show-del');
+      }, 500);
+    }, { passive: true });
+    el.addEventListener('touchend', () => clearTimeout(longPressTimer), { passive: true });
+    el.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
+  }
+
+  document.addEventListener('touchstart', (e) => {
+    if (!e.target.closest('.entry')) {
+      document.querySelectorAll('.entry').forEach(el => el.classList.remove('show-del'));
+    }
+  }, { passive: true });
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // Service Worker for offline support
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+      const CACHE = 'text-collection-v1';
+      self.addEventListener('install', e => {
+        e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
+        self.skipWaiting();
+      });
+      self.addEventListener('activate', e => {
+        e.waitUntil(clients.claim());
+      });
+      self.addEventListener('fetch', e => {
+        e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+      });
+    `;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(() => {});
+  }
+
+  load();
+</script>
+</body>
+</html>
