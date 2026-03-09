@@ -717,9 +717,16 @@
   function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      const data = raw ? JSON.parse(raw) : {};
-      entries = data.entries || [];
-      deletedIds = new Set(data.deletedIds || []);
+      if (!raw) { entries = []; deletedIds = new Set(); return; }
+      const data = JSON.parse(raw);
+      // support old format (plain array) and new format (object)
+      if (Array.isArray(data)) {
+        entries = data;
+        deletedIds = new Set();
+      } else {
+        entries = data.entries || [];
+        deletedIds = new Set(data.deletedIds || []);
+      }
     } catch(_) { entries = []; deletedIds = new Set(); }
   }
 
