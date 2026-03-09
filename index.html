@@ -655,7 +655,7 @@
       if (!res.ok) throw new Error('fetch failed');
       const json = await res.json();
       ghSha = json.sha;
-      const remote = JSON.parse(atob(json.content.replace(/\n/g,'')));
+      const remote = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g,'')))));
       // Merge: 以 id 為主，合併本地和遠端，去重
       const merged = mergeEntries(entries, remote);
       entries = merged;
