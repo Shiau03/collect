@@ -581,12 +581,19 @@
   const STORAGE_KEY = 'text-collection-v1';
   const CFG_KEY = 'text-collection-cfg';
   let entries = [];
+  let deletedIds = new Set(); // track deleted entry ids for sync
   let longPressTimer = null;
   let currentQuery = '';
   let syncing = false;
   let ghSha = null; // SHA of data.json on GitHub
 
-  // --- Config ---
+  function encodeBase64(str) {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))));
+  }
+
+  function decodeBase64(str) {
+    return decodeURIComponent(Array.from(atob(str.replace(/\n/g,''))).map(c => '%' + c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
+  }
   function getCfg() {
     try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch(_) { return {}; }
   }
@@ -655,9 +662,14 @@
       if (!res.ok) throw new Error('fetch failed');
       const json = await res.json();
       ghSha = json.sha;
-      const remote = JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g,'')))));
-      // Merge: 以 id 為主，合併本地和遠端，去重
-      const merged = mergeEntries(entries, remote);
+      const rawData = JSON.parse(decodeBase64(json.content));
+      // support both old format (array) and new format (object)
+      const remoteEntries = Array.isArray(rawData) ? rawData : (rawData.entries || []);
+      const remoteDeleted = new Set(Array.isArray(rawData) ? [] : (rawData.deletedIds || []));
+      // merge deleted sets
+      remoteDeleted.forEach(id => deletedIds.add(id));
+      // merge entries, then filter out deleted
+      const merged = mergeEntries(entries, remoteEntries).filter(e => !deletedIds.has(e.id));
       entries = merged;
       saveLocal();
       render();
@@ -675,7 +687,7 @@
     syncing = true;
     setSyncStatus('syncing', '同步中…');
     try {
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(entries))));
+      const content = encodeBase64(JSON.stringify({ entries, deletedIds: Array.from(deletedIds) }));
       const body = {
         message: 'sync',
         content,
@@ -702,16 +714,22 @@
     return new Date(ts).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
   }
 
-  // --- Local Storage ---
   function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      entries = raw ? JSON.parse(raw) : [];
-    } catch(_) { entries = []; }
+      const data = raw ? JSON.parse(raw) : {};
+      entries = data.entries || [];
+      deletedIds = new Set(data.deletedIds || []);
+    } catch(_) { entries = []; deletedIds = new Set(); }
   }
 
   function saveLocal() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(_) {}
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        entries,
+        deletedIds: Array.from(deletedIds)
+      }));
+    } catch(_) {}
   }
 
   function formatDate(ts) {
@@ -808,6 +826,7 @@
 
   async function deleteEntry(id) {
     if (!confirm('移除這則收藏？')) return;
+    deletedIds.add(id);
     entries = entries.filter(e => e.id !== id);
     saveLocal();
     render();
