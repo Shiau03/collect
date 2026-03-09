@@ -333,6 +333,166 @@
       padding: 0 1px;
     }
 
+    /* Sync Settings */
+    .sync-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      padding: 12px 16px;
+      background: var(--paper);
+      border: 1px solid var(--sepia-faint);
+      border-radius: 2px;
+    }
+
+    .sync-status {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'Noto Serif TC', serif;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sync-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted2);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .sync-dot.ok { background: #6A9A6A; }
+    .sync-dot.err { background: #9A5A5A; }
+    .sync-dot.syncing { animation: pulse 1s infinite; background: var(--sepia); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .sync-btn {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--sepia);
+      background: none;
+      border: 1px solid var(--sepia-light);
+      border-radius: 1px;
+      padding: 5px 14px;
+      cursor: pointer;
+      -webkit-appearance: none;
+      transition: opacity 0.2s;
+    }
+
+    .sync-btn:active { opacity: 0.6; }
+
+    /* Settings Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #1E1A16;
+      border: 1px solid var(--sepia-faint);
+      border-radius: 2px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    .modal-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 20px;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+
+    .modal-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+
+    .modal-desc a { color: var(--sepia); }
+
+    .field-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .field-input {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--sepia-faint);
+      border-radius: 1px;
+      padding: 10px 12px;
+      font-family: 'Noto Serif TC', serif;
+      font-size: 13px;
+      color: var(--ink);
+      outline: none;
+      margin-bottom: 16px;
+      -webkit-appearance: none;
+      transition: border-color 0.2s;
+    }
+
+    .field-input:focus { border-color: var(--sepia-light); }
+    .field-input::placeholder { color: var(--muted2); }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      color: var(--bg);
+      background: var(--sepia);
+      border: none;
+      border-radius: 1px;
+      padding: 10px;
+      cursor: pointer;
+      -webkit-appearance: none;
+      transition: opacity 0.2s;
+    }
+
+    .btn-primary:active { opacity: 0.7; }
+
+    .btn-secondary {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      background: none;
+      border: 1px solid var(--sepia-faint);
+      border-radius: 1px;
+      padding: 10px 18px;
+      cursor: pointer;
+      -webkit-appearance: none;
+    }
+
     /* Toast */
     .toast {
       position: fixed;
@@ -368,6 +528,14 @@
     <div class="header-count" id="count">尚無收藏</div>
   </div>
 
+  <div class="sync-bar">
+    <div class="sync-status">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncStatus">未設定同步</span>
+    </div>
+    <button class="sync-btn" onclick="openSettings()">設定同步</button>
+  </div>
+
   <div class="search-wrap">
     <span class="search-icon">⌕</span>
     <input class="search-input" id="searchInput" type="search" placeholder="搜尋收藏的文字…" oninput="onSearch()" />
@@ -388,23 +556,161 @@
   <div class="entries" id="entries"></div>
 </div>
 
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">GitHub 同步設定</div>
+    <div class="modal-desc">
+      填入你的 GitHub 資訊，收藏內容會自動同步到雲端，任何裝置都能讀取。
+    </div>
+    <div class="field-label">GitHub 帳號</div>
+    <input class="field-input" id="cfgOwner" placeholder="例如 Shiau03" />
+    <div class="field-label">Repository 名稱</div>
+    <input class="field-input" id="cfgRepo" placeholder="例如 collect" />
+    <div class="field-label">Personal Access Token</div>
+    <input class="field-input" id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxx" />
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSettings()">取消</button>
+      <button class="btn-primary" onclick="saveSettings()">儲存並同步</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
   const STORAGE_KEY = 'text-collection-v1';
+  const CFG_KEY = 'text-collection-cfg';
   let entries = [];
   let longPressTimer = null;
   let currentQuery = '';
+  let syncing = false;
+  let ghSha = null; // SHA of data.json on GitHub
 
-  function load() {
+  // --- Config ---
+  function getCfg() {
+    try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch(_) { return {}; }
+  }
+
+  function saveCfg(cfg) {
+    localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  }
+
+  // --- Settings Modal ---
+  function openSettings() {
+    const cfg = getCfg();
+    document.getElementById('cfgOwner').value = cfg.owner || '';
+    document.getElementById('cfgRepo').value = cfg.repo || '';
+    document.getElementById('cfgToken').value = cfg.token || '';
+    document.getElementById('settingsModal').classList.add('open');
+  }
+
+  function closeSettings() {
+    document.getElementById('settingsModal').classList.remove('open');
+  }
+
+  async function saveSettings() {
+    const owner = document.getElementById('cfgOwner').value.trim();
+    const repo = document.getElementById('cfgRepo').value.trim();
+    const token = document.getElementById('cfgToken').value.trim();
+    if (!owner || !repo || !token) { showToast('請填寫所有欄位'); return; }
+    saveCfg({ owner, repo, token });
+    closeSettings();
+    await syncFromGitHub();
+  }
+
+  // --- Sync Status UI ---
+  function setSyncStatus(state, msg) {
+    const dot = document.getElementById('syncDot');
+    const status = document.getElementById('syncStatus');
+    dot.className = 'sync-dot' + (state ? ' ' + state : '');
+    status.textContent = msg;
+  }
+
+  // --- GitHub API ---
+  async function ghRequest(method, path, body) {
+    const cfg = getCfg();
+    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
+      method,
+      headers: {
+        'Authorization': `token ${cfg.token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    return res;
+  }
+
+  async function syncFromGitHub() {
+    const cfg = getCfg();
+    if (!cfg.token) { setSyncStatus('', '未設定同步'); return; }
+    setSyncStatus('syncing', '同步中…');
+    try {
+      const res = await ghRequest('GET', 'data.json');
+      if (res.status === 404) {
+        // 第一次使用，上傳本地資料
+        await pushToGitHub();
+        return;
+      }
+      if (!res.ok) throw new Error('fetch failed');
+      const json = await res.json();
+      ghSha = json.sha;
+      const remote = JSON.parse(atob(json.content.replace(/\n/g,'')));
+      // Merge: 以 id 為主，合併本地和遠端，去重
+      const merged = mergeEntries(entries, remote);
+      entries = merged;
+      saveLocal();
+      render();
+      setSyncStatus('ok', '已同步 · ' + formatTime(Date.now()));
+    } catch(e) {
+      setSyncStatus('err', '同步失敗');
+      showToast('同步失敗，請檢查設定');
+    }
+  }
+
+  async function pushToGitHub() {
+    const cfg = getCfg();
+    if (!cfg.token) return;
+    if (syncing) return;
+    syncing = true;
+    setSyncStatus('syncing', '同步中…');
+    try {
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(entries))));
+      const body = {
+        message: 'sync',
+        content,
+        ...(ghSha ? { sha: ghSha } : {})
+      };
+      const res = await ghRequest('PUT', 'data.json', body);
+      if (!res.ok) throw new Error('push failed');
+      const json = await res.json();
+      ghSha = json.content.sha;
+      setSyncStatus('ok', '已同步 · ' + formatTime(Date.now()));
+    } catch(e) {
+      setSyncStatus('err', '同步失敗');
+    }
+    syncing = false;
+  }
+
+  function mergeEntries(local, remote) {
+    const map = new Map();
+    [...remote, ...local].forEach(e => map.set(e.id, e));
+    return Array.from(map.values()).sort((a,b) => b.ts - a.ts);
+  }
+
+  function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // --- Local Storage ---
+  function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       entries = raw ? JSON.parse(raw) : [];
     } catch(_) { entries = []; }
-    render();
   }
 
-  function save() {
+  function saveLocal() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(_) {}
   }
 
@@ -441,28 +747,21 @@
     const container = document.getElementById('entries');
     const infoEl = document.getElementById('searchInfo');
     const filtered = getFiltered();
-
     updateCount();
-
     if (currentQuery) {
       infoEl.style.display = 'block';
-      infoEl.textContent = filtered.length === 0
-        ? `找不到「${currentQuery}」`
-        : `找到 ${filtered.length} 則`;
+      infoEl.textContent = filtered.length === 0 ? `找不到「${currentQuery}」` : `找到 ${filtered.length} 則`;
     } else {
       infoEl.style.display = 'none';
     }
-
     if (entries.length === 0) {
       container.innerHTML = '<div class="empty">還沒有收藏<br>把第一句話放進來吧</div>';
       return;
     }
-
     if (filtered.length === 0) {
       container.innerHTML = `<div class="empty">沒有符合的結果</div>`;
       return;
     }
-
     container.innerHTML = filtered.map((e, i) => `
       <div class="entry" id="entry-${e.id}" style="animation-delay:${Math.min(i,8)*0.04}s">
         <div class="entry-text">${highlight(e.text, currentQuery)}</div>
@@ -471,15 +770,13 @@
         <button class="del-btn" onclick="deleteEntry(${e.id})" title="移除">×</button>
       </div>
     `).join('');
-
     filtered.forEach(e => bindLongPress(e.id));
   }
 
   function onSearch() {
     const val = document.getElementById('searchInput').value;
     currentQuery = val.trim();
-    const clearBtn = document.getElementById('searchClear');
-    clearBtn.classList.toggle('visible', currentQuery.length > 0);
+    document.getElementById('searchClear').classList.toggle('visible', currentQuery.length > 0);
     render();
   }
 
@@ -491,29 +788,30 @@
     render();
   }
 
-  function addEntry() {
+  async function addEntry() {
     const text = document.getElementById('textInput').value.trim();
     if (!text) { showToast('請先輸入文字'); return; }
     const source = document.getElementById('sourceInput').value.trim();
     const entry = { id: Date.now(), text, source, ts: Date.now() };
     entries.unshift(entry);
-    save();
+    saveLocal();
     document.getElementById('textInput').value = '';
     document.getElementById('sourceInput').value = '';
-    // Clear search so new entry is visible
     clearSearch();
     setTimeout(() => {
       const el = document.getElementById(`entry-${entry.id}`);
       if (el) el.classList.add('flash');
     }, 50);
     showToast('已收藏');
+    await pushToGitHub();
   }
 
-  function deleteEntry(id) {
+  async function deleteEntry(id) {
     if (!confirm('移除這則收藏？')) return;
     entries = entries.filter(e => e.id !== id);
-    save();
+    saveLocal();
     render();
+    await pushToGitHub();
   }
 
   function bindLongPress(id) {
@@ -530,7 +828,7 @@
   }
 
   document.addEventListener('touchstart', (e) => {
-    if (!e.target.closest('.entry')) {
+    if (!e.target.closest('.entry') && !e.target.closest('.modal')) {
       document.querySelectorAll('.entry').forEach(el => el.classList.remove('show-del'));
     }
   }, { passive: true });
@@ -542,27 +840,25 @@
     setTimeout(() => t.classList.remove('show'), 1800);
   }
 
-  // Service Worker for offline support
+  // Service Worker
   if ('serviceWorker' in navigator) {
     const swCode = `
       const CACHE = 'text-collection-v1';
-      self.addEventListener('install', e => {
-        e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
-        self.skipWaiting();
-      });
-      self.addEventListener('activate', e => {
-        e.waitUntil(clients.claim());
-      });
+      self.addEventListener('install', e => { self.skipWaiting(); });
+      self.addEventListener('activate', e => { e.waitUntil(clients.claim()); });
       self.addEventListener('fetch', e => {
+        if (e.request.url.includes('api.github.com')) return;
         e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
       });
     `;
     const blob = new Blob([swCode], { type: 'application/javascript' });
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl).catch(() => {});
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
   }
 
-  load();
+  // Init
+  loadLocal();
+  render();
+  syncFromGitHub();
 </script>
 </body>
 </html>
